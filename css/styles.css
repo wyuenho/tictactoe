@@ -1,6 +1,7 @@
 .browsehappy {
-  background-color: #cfd3d3;
+  background-color: lightyellow;
   text-align: center;
+  padding: 5px 10px;
 }
 
 html, body {
@@ -10,7 +11,6 @@ html, body {
 body {
   background-color: #efefef;
 }
-
 
 #main {
   margin: 0 auto;
