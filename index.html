@@ -170,10 +170,10 @@
            if (self.state.isTerminal()) {
 
              if (self.state.utility == -1) {
-               $('.overlay').find('h1').text("YOU'VE WON").andSelf().show();
+               $('.overlay').find('h1').text("YOU'VE WON").andSelf().addClass('bounce-in-down');
              }
              else {
-               $('.overlay').find('h1').text('DRAW').andSelf().show();
+               $('.overlay').find('h1').text('DRAW').andSelf().addClass('bounce-in-down');
              }
 
              self.$el.off('click', 'td');
@@ -191,7 +191,7 @@
 
              if (self.state.isTerminal()) {
 
-               $('.overlay').find('h1').text("YOU'VE LOST").andSelf().show();
+               $('.overlay').find('h1').text("YOU'VE LOST").andSelf().addClass('bounce-in-down');
 
                self.$el.off('click', 'td');
              }
@@ -211,8 +211,8 @@
 
      TicTacToe.prototype.restart = function () {
        this.state = new GameState();
-       $('.overlay').hide();
-       this.$el.find('td').removeClass('ai').removeClass('human');;
+       $('.overlay').removeClass('bounce-in-down');
+       this.$el.find('td').removeClass('ai').removeClass('human');
        this.$el.off('click', 'td');
        this.startGameLoop();
      };
