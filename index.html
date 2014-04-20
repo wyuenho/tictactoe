@@ -144,7 +144,7 @@
          return path[1] == best;
        });
 
-       return paths[Math.floor(Math.random() * paths.length)][0];
+       return paths[Math.floor(Math.random() * (paths.length - 1))][0];
      };
 
      function TicTacToe (el) {
@@ -185,7 +185,7 @@
              var move = self.state.bestNextMove();
              self.state.applyMove(move);
 
-             self.$el.find('tbody tr').eq(~~(move / 3))
+             self.$el.find('tbody tr').eq(Math.floor(move / 3))
                      .find('td').eq(move % 3)
                      .addClass('ai');
 
