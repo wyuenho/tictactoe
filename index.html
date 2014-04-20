@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Tic-Tac-Toe</title>
+    <meta name="description" content="Unbeatable Tic-Tac-Toe" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.7.1/modernizr.min.js"></script>
+    <!--[if lt IE 9]>
+    <script src="https://rawgit.com/es-shims/es5-shim/v3.0.2/es5-shim.min.js"></script>
+    <![endif]-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <link rel="stylesheet" media="all" href="css/normalize.css" />
+    <link rel="stylesheet" media="all" href="css/styles.css" />
+    <script>
+     function GameState(board, turn, utility) {
+       // board is kept as a 1d array for easy copying
+       this.board = board && board.slice() || [0, 0, 0, 0, 0, 0, 0, 0, 0];
+       // -1 = human, 1 = computer
+       this.turn = turn || -1;
+       // -1 human wins, 0 draw/game in progress, 1 computer wins
+       this.utility = utility || 0;
+     }
+
+     GameState.prototype.isLegal = function (i, j) {
+       if (j == null) {
+         j = i % 3;
+         i = Math.floor(i / 3);
+       }
+       return this.legalMoves().some(function (move) {
+         return move % 3 == j && Math.floor(move / 3) == i;
+       });
+     };
+
+     // Returns all the cells for this state that haven't been filled yet
+     GameState.prototype.legalMoves = function () {
+       var moves = [];
+       for (var i = 0; i < this.board.length; i++) {
+         if (this.board[i] == 0) {
+           moves.push(i);
+         }
+       }
+       return moves;
+     };
+
+     GameState.prototype.isTerminal = function () {
+       return !!(this.utility || this.legalMoves().length == 0);
+     };
+
+     GameState.prototype.evaluate = function (i, j) {
+       if (j == null) {
+         j = i % 3;
+         i = Math.floor(i / 3);
+       }
+
+       // horizontal
+       for (var y = i, x = j, k = 0;
+            k < 3;
+            y = (y + 1) % 3, k++) {
+         if (this.board[y * 3 + x] != this.turn) break;
+       }
+       if (k == 3) return this.turn;
+
+       // vertical
+       for (var y = i, x = j, k = 0;
+            k < 3;
+            x = (x + 1) % 3, k++) {
+         if (this.board[y * 3 + x] != this.turn) break;
+       }
+       if (k == 3) return this.turn;
+
+       // left diagonal
+       for (var y = 0, x = 0, k = 0;
+            k < 3;
+            y++, x++, k++) {
+         if (this.board[y * 3 + x] != this.turn) break;
+       }
+       if (k == 3) return this.turn;
+
+       // right diagonal
+       for (var y = 0, x = 2, k = 0;
+            k < 3;
+            y++, x--, k++) {
+         if (this.board[y * 3 + x] != this.turn) break;
+       }
+       if (k == 3) return this.turn;
+
+       return 0;
+     };
+
+     // possible state transitions from this state
+     GameState.prototype.transitions = function () {
+       if (this.utility) return [];
+       return this.legalMoves().map(function (move) {
+         return [move, (new GameState(this.board, this.turn)).applyMove(move).nextTurn()];
+       }, this);
+     };
+
+     GameState.prototype.nextTurn = function () {
+       this.turn = -this.turn;
+       return this;
+     };
+
+     GameState.prototype.applyMove = function (i, j) {
+       if (j == null) {
+         j = i % 3;
+         i = Math.floor(i / 3);
+       }
+       this.board[i * 3 + j] = this.turn;
+       this.utility = this.evaluate(i, j);
+       return this;
+     };
+
+     // Minimax variant that takes account of search depth. The deeper a search
+     // is, the larger the magnitude and less desirable so instead of maximizing
+     // the minimized game sucessors, this method minimizes them
+     GameState.prototype.bestNextMove = function () {
+       function maximize(state, depth) {
+         if (state.isTerminal()) return state.utility * depth || -Infinity;
+         return Math.min.apply(Math, state.transitions().map(function (transition) {
+           return minimize(transition[1], depth + 1);
+         }));
+       }
+
+       function minimize(state, depth) {
+         if (state.isTerminal()) return state.utility * depth || Infinity;
+         return Math.max.apply(Math, state.transitions().map(function (transition) {
+           return maximize(transition[1], depth + 1);
+         }));
+       }
+
+       var paths = this.transitions().map(function (transition) {
+         return [transition[0], maximize(transition[1], 1)];
+       });
+
+       var best = Math.min.apply(Math, paths.map(function (path) {
+         return path[1];
+       }).filter(function (score) {
+         return score >= 0;
+       }));
+
+       paths = paths.filter(function (path) {
+         return path[1] == best;
+       });
+
+       return paths[Math.floor(Math.random() * paths.length)][0];
+     };
+
+     function TicTacToe (el) {
+       this.state = new GameState();
+       this.$el = $(el);
+       this.el = this.$el[0];
+     }
+
+     TicTacToe.prototype.startGameLoop = function () {
+       var self = this;
+       this.$el.on('click', 'td', function (e) {
+         var $cell = $(e.target);
+         var $tr = $cell.parent();
+         var i = $tr.parent().find('tr').index($tr);
+         var j = $tr.find('td').index($cell);
+
+         if (self.state.isLegal(i, j)) {
+
+           $cell.addClass('human');
+
+           self.state.applyMove(i, j);
+
+           if (self.state.isTerminal()) {
+
+             if (self.state.utility == -1) {
+               $('.overlay').find('h1').text("YOU'VE WON").andSelf().show();
+             }
+             else {
+               $('.overlay').find('h1').text('DRAW').andSelf().show();
+             }
+
+             self.$el.off('click', 'td');
+           }
+           else {
+
+             self.state.nextTurn();
+
+             var move = self.state.bestNextMove();
+             self.state.applyMove(move);
+
+             self.$el.find('tbody tr').eq(~~(move / 3))
+                     .find('td').eq(move % 3)
+                     .addClass('ai');
+
+             if (self.state.isTerminal()) {
+
+               $('.overlay').find('h1').text("YOU'VE LOST").andSelf().show();
+
+               self.$el.off('click', 'td');
+             }
+             self.state.nextTurn();
+           }
+         }
+         else {
+           // shake the cell to indicate illegal move
+           $cell.one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function (e) {
+             if (e.target == $cell[0]) {
+               $cell.removeClass('shake')
+             }
+           }).addClass('shake');
+         }
+       });
+     };
+
+     TicTacToe.prototype.restart = function () {
+       this.state = new GameState();
+       $('.overlay').hide();
+       this.$el.find('td').removeClass('ai').removeClass('human');;
+       this.$el.off('click', 'td');
+       this.startGameLoop();
+     };
+    </script>
+  </head>
+  <body>
+    <!--[if lt IE 7]>
+    <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+    <![endif]-->
+
+    <div id="main">
+      <div class="overlay">
+        <div class="content">
+          <h1></h1>
+          <button id="restart-btn">Restart</button>
+        </div>
+      </div>
+      <table class="tic-tac-toe">
+        <thead>
+          <tr>
+            <th colspan="3">Tic-Tac-Toe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <script>
+     $(document).ready(function () {
+       var tictactoe = new TicTacToe('.tic-tac-toe');
+       tictactoe.startGameLoop();
+       $('#restart-btn').click(tictactoe.restart.bind(tictactoe));
+     });
+    </script>
+  </body>
+</html>
