@@ -153,6 +153,66 @@
        this.el = this.$el[0];
      }
 
+     TicTacToe.prototype.renderEndGame = function () {
+       var $overlay = $('.overlay');
+       var $h1 = $('.overlay h1');
+       switch (this.state.utility) {
+         case -1:
+           $h1.text("YOU'VE WON");
+           break;
+         case 1:
+           $h1.text("YOU'VE LOST");
+           break;
+         default:
+           $h1.text('DRAW');
+           break;
+       }
+       $overlay.addClass('bounce-in-down');
+     };
+
+     TicTacToe.prototype.makeAIMove = function () {
+       var move = this.state.bestNextMove();
+       this.state.applyMove(move);
+
+       this.$el.find('tbody tr').eq(Math.floor(move / 3))
+               .find('td').eq(move % 3)
+               .addClass('ai');
+
+       if (this.state.isTerminal()) {
+         this.renderEndGame();
+         this.$el.off('click', 'td');
+       }
+       else if (this.state.legalMoves().length == 1) {
+         this.state.nextTurn();
+         this.makeHumanMove(this.state.legalMoves()[0]);
+       }
+       else {
+         this.state.nextTurn();
+       }
+     };
+
+     TicTacToe.prototype.makeHumanMove = function (i, j) {
+       if (j == null) {
+         j = i % 3;
+         i = Math.floor(i / 3);
+       }
+
+       this.state.applyMove(i * 3 + j);
+
+       this.$el.find('tbody tr').eq(i)
+               .find('td').eq(j)
+               .addClass('human');
+
+       if (this.state.isTerminal()) {
+         this.renderEndGame();
+         this.$el.off('click', 'td');
+       }
+       else {
+         this.state.nextTurn();
+         this.makeAIMove();
+       }
+     };
+
      TicTacToe.prototype.startGameLoop = function () {
        var self = this;
        this.$el.on('click', 'td', function (e) {
@@ -162,41 +222,7 @@
          var j = $tr.find('td').index($cell);
 
          if (self.state.isLegal(i, j)) {
-
-           $cell.addClass('human');
-
-           self.state.applyMove(i, j);
-
-           if (self.state.isTerminal()) {
-
-             if (self.state.utility == -1) {
-               $('.overlay').find('h1').text("YOU'VE WON").andSelf().addClass('bounce-in-down');
-             }
-             else {
-               $('.overlay').find('h1').text('DRAW').andSelf().addClass('bounce-in-down');
-             }
-
-             self.$el.off('click', 'td');
-           }
-           else {
-
-             self.state.nextTurn();
-
-             var move = self.state.bestNextMove();
-             self.state.applyMove(move);
-
-             self.$el.find('tbody tr').eq(Math.floor(move / 3))
-                     .find('td').eq(move % 3)
-                     .addClass('ai');
-
-             if (self.state.isTerminal()) {
-
-               $('.overlay').find('h1').text("YOU'VE LOST").andSelf().addClass('bounce-in-down');
-
-               self.$el.off('click', 'td');
-             }
-             self.state.nextTurn();
-           }
+           self.makeHumanMove(i, j);
          }
          else {
            // shake the cell to indicate illegal move
